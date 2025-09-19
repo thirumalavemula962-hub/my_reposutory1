@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>After-Inter Dashboard — Choose Your Best Group</title>
+<style>
+  :root{
+    --bg:#0f1724; --card:#0b1220; --muted:#9aa4b2; --accent:#6ee7b7; --accent2:#60a5fa;
+    --glass: rgba(255,255,255,0.03);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:linear-gradient(180deg,#071226 0%, #0b1a2a 100%);
+    color:#e6eef6; min-height:100vh; display:flex; align-items:flex-start; justify-content:center;
+    padding:28px;
+  }
+
+  .wrap{width:100%; max-width:1100px;}
+  header{display:flex; gap:16px; align-items:center; margin-bottom:18px;}
+  .logo{
+    width:56px; height:56px; border-radius:12px; background:linear-gradient(135deg,var(--accent2),var(--accent));
+    display:flex; align-items:center; justify-content:center; font-weight:700; color:#04233a;
+    box-shadow:0 6px 22px rgba(12,20,30,0.6);
+  }
+  h1{margin:0; font-size:20px}
+  p.lead{margin:0; color:var(--muted); font-size:13px}
+
+  .grid{display:grid; grid-template-columns: 420px 1fr; gap:18px; align-items:start;}
+  @media (max-width:900px){ .grid{grid-template-columns:1fr} }
+
+  .card{
+    background:var(--card); border-radius:12px; padding:18px; box-shadow: 0 6px 20px rgba(4,10,18,0.6);
+    border:1px solid rgba(255,255,255,0.03);
+  }
+
+  /* Left column: questionnaire */
+  .question{margin-bottom:12px}
+  .q-title{font-weight:600; margin-bottom:8px}
+  .options{display:flex; gap:8px; flex-wrap:wrap}
+  .opt{
+    background:var(--glass); padding:8px 10px; border-radius:8px; cursor:pointer; user-select:none;
+    border:1px solid transparent; color:var(--muted); font-size:14px;
+  }
+  .opt.selected{background:linear-gradient(90deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02)); color:#e6eef6; border-color:rgba(255,255,255,0.06)}
+
+  .range-row{display:flex; gap:12px; align-items:center}
+  .range-row input[type=range]{flex:1}
+  .small{font-size:12px; color:var(--muted)}
+
+  .actions{display:flex; gap:8px; margin-top:12px}
+  button.btn{
+    background:linear-gradient(90deg,var(--accent2),var(--accent)); color:#04233a; border:none; padding:10px 12px; border-radius:10px;
+    cursor:pointer; font-weight:600; box-shadow:0 6px 18px rgba(6,16,30,0.5);
+  }
+  button.ghost{background:transparent; color:var(--accent); border:1px solid rgba(255,255,255,0.04)}
+
+  /* Right column: results */
+  .results-grid{display:grid; grid-template-columns: 1fr 300px; gap:12px;}
+  @media (max-width:1100px){ .results-grid{grid-template-columns: 1fr } }
+
+  .summary{padding:14px; border-radius:10px; background:linear-gradient(180deg, rgba(255,255,255,0.014), transparent)}
+  .badge{display:inline-block; font-size:12px; color:#04233a; background:var(--accent); padding:6px 8px; border-radius:8px; font-weight:700}
+
+  /* bar chart (CSS) */
+  .bars{margin-top:12px; display:flex; flex-direction:column; gap:10px}
+  .bar-row{display:flex; align-items:center; gap:12px}
+  .bar-label{width:110px; font-size:13px; color:var(--muted)}
+  .bar-track{flex:1; height:14px; background:rgba(255,255,255,0.04); border-radius:999px; overflow:hidden; position:relative}
+  .bar-fill{height:100%; border-radius:999px; position:absolute; left:0; top:0; width:0; transition:width .7s ease}
+  .score-pill{min-width:40px; text-align:right; font-weight:700; color:var(--muted); font-size:13px}
+
+  /* suggestion list */
+  .suggestion{margin-top:12px; display:flex; gap:10px; align-items:flex-start}
+  .suggestion .card-mini{flex:1; background:transparent; border:1px solid rgba(255,255,255,0.03); padding:10px; border-radius:8px}
+  .small-muted{font-size:13px; color:var(--muted)}
+
+  footer{margin-top:12px; color:var(--muted); font-size:13px; text-align:center}
+  .controls{display:flex; gap:8px; align-items:center; justify-content:flex-end;}
+
+  /* printable */
+  @media print{
+    body{background:#fff;color:#000}
+    .card{box-shadow:none;border:1px solid #eee;background:#fff}
+    .controls, header, .actions{display:none}
+  }
+
+  /* helpers */
+  .muted{color:var(--muted)}
+  .tiny{font-size:12px}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo">AI</div>
+      <div>
+        <h1>After-Inter Dashboard</h1>
+        <p class="lead">Interactive tool to suggest which group (PCM, PCB, Commerce, Arts, Vocational) fits a student best.</p>
+      </div>
+      <div style="flex:1"></div>
+      <div class="controls">
+        <button class="ghost" id="loadSaved">Load saved</button>
+        <button class="ghost" id="clearSaved">Clear saved</button>
+      </div>
+    </header>
+
+    <main class="grid">
+      <!-- left: questionnaire -->
+      <section class="card" id="questionnaire">
+        <h2 style="margin-top:0">Quick Questionnaire</h2>
+        <p class="small-muted">Answer honestly — this is a guidance tool, not a strict rule. Use results with career counseling if needed.</p>
+
+        <div class="question" data-q="q1">
+          <div class="q-title">1) Which subjects do you enjoy? (pick up to 2)</div>
+          <div class="options" id="optSubjects">
+            <div class="opt" data-value="pcm">Math & Physics (PCM)</div>
+            <div class="opt" data-value="pcb">Biology & Chemistry (PCB)</div>
+            <div class="opt" data-value="commerce">Accounts/Economics (Commerce)</div>
+            <div class="opt" data-value="arts">History/Languages/Arts (Arts)</div>
+            <div class="opt" data-value="voc">Hands-on/Technical (Vocational)</div>
+          </div>
+        </div>
+
+        <div class="question" data-q="q2">
+          <div class="q-title">2) How comfortable are you with Mathematics?</div>
+          <div class="range-row">
+            <span class="small-muted">Low</span>
+            <input type="range" id="mathRange" min="0" max="10" value="6" />
+            <span class="small-muted">High</span>
+            <div style="width:40px;text-align:right" id="mathVal">6</div>
+          </div>
+        </div>
+
+        <div class="question" data-q="q3">
+          <div class="q-title">3) Do you prefer theoretical study or practical work?</div>
+          <div class="options" id="optTheory">
+            <div class="opt" data-value="theory">Mostly theoretical</div>
+            <div class="opt" data-value="balanced">Balanced</div>
+            <div class="opt" data-value="practical">Mostly practical / hands-on</div>
+          </div>
+        </div>
+
+        <div class="question" data-q="q4">
+          <div class="q-title">4) Which future careers appeal to you? (pick up to 2)</div>
+          <div class="options" id="optCareer">
+            <div class="opt" data-value="eng">Engineering / Data / CS</div>
+            <div class="opt" data-value="med">Medicine / Life Sciences</div>
+            <div class="opt" data-value="bus">Business / Finance</div>
+            <div class="opt" data-value="creative">Design / Arts / Media</div>
+            <div class="opt" data-value="techvoc">Technical trades / ITI / Poly</div>
+          </div>
+        </div>
+
+        <div class="question" data-q="q5">
+          <div class="q-title">5) How do you perform in exams? (self-assessment)</div>
+          <div class="options" id="optPerformance">
+            <div class="opt" data-value="high">Consistently high</div>
+            <div class="opt" data-value="avg">Average</div>
+            <div class="opt" data-value="strug">I struggle sometimes</div>
+          </div>
+        </div>
+
+        <div class="question" data-q="q6">
+          <div class="q-title">6) Are you open to competitive exams (JEE/NEET/CA/CSE) and intense coaching?</div>
+          <div class="options" id="optComp">
+            <div class="opt" data-value="yes">Yes — I'll prepare for competitive exams</div>
+            <div class="opt" data-value="maybe">Maybe — depends on career</div>
+            <div class="opt" data-value="no">No — prefer steady coursework</div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn" id="calcBtn">Calculate suggestion</button>
+          <button class="ghost" id="resetBtn">Reset</button>
+        </div>
+      </section>
+
+      <!-- right: results -->
+      <aside>
+        <div class="results-grid">
+          <div class="card summary" id="resultCard">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div class="badge" id="topBadge">Top Suggestion</div>
+                <div style="font-size:18px;font-weight:700;margin-top:8px" id="topGroup">—</div>
+                <div class="small-muted" id="topExplain">Answer the questions and click "Calculate suggestion".</div>
+              </div>
+              <div style="text-align:right">
+                <div class="tiny muted">Confidence</div>
+                <div style="font-size:20px;font-weight:800" id="confVal">—</div>
+              </div>
+            </div>
+
+            <div class="bars" id="barsArea" aria-hidden="false" style="margin-top:16px">
+              <!-- bars injected by JS -->
+            </div>
+
+            <div class="suggestion">
+              <div class="card-mini">
+                <div style="font-weight:700">Why this suggestion?</div>
+                <div class="tiny muted" id="whyText">No data yet</div>
+              </div>
+              <div class="card-mini">
+                <div style="font-weight:700">Next steps</div>
+                <div class="tiny muted" id="nextSteps">Complete career research & talk to counselor.</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
+              <button class="ghost" id="saveBtn">Save result</button>
+              <button class="ghost" id="printBtn">Print</button>
+            </div>
+          </div>
+
+          <div class="card" id="detailsCard">
+            <h3 style="margin-top:0">Group quick guide</h3>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div><strong>PCM</strong> — Maths, Physics, Chemistry. Good for Engineering, CS, Data Science, Architecture.</div>
+              <div><strong>PCB</strong> — Maths optional; Biology, Chemistry. Good for Medicine, Pharmacy, Research, Life sciences.</div>
+              <div><strong>Commerce</strong> — Account, Economics, Business Maths. Good for Business, CA, Finance, Management.</div>
+              <div><strong>Arts</strong> — Languages, History, Social sciences. Good for Design, Media, Humanities, Civil Services prep.</div>
+              <div><strong>Vocational</strong> — Technical trades, ITI, applied skills. Good for industry jobs, short diplomas, entrepreneurship.</div>
+            </div>
+
+            <hr style="border:none;border-top:1px solid rgba(255,255,255,0.04);margin:12px 0" />
+
+            <div><strong>Tip:</strong> Use this output as guidance. Combine with marks, interests, entrance exam readiness and career conversations.</div>
+          </div>
+        </div>
+
+        <footer>
+          <div class="muted">Built for quick guidance • Not a substitute for academic counseling</div>
+        </footer>
+      </aside>
+    </main>
+  </div>
+
+<script>
+(function(){
+  // Data model
+  const groups = ['PCM','PCB','Commerce','Arts','Vocational'];
+  const groupColors = {
+    'PCM':'linear-gradient(90deg,#60a5fa,#7dd3fc)',
+    'PCB':'linear-gradient(90deg,#34d399,#6ee7b7)',
+    'Commerce':'linear-gradient(90deg,#f59e0b,#fbbf24)',
+    'Arts':'linear-gradient(90deg,#a78bfa,#c084fc)',
+    'Vocational':'linear-gradient(90deg,#fb7185,#fda4af)'
+  };
+
+  // Helpers
+  const el = id => document.getElementById(id);
+  const qsAll = sel => Array.from(document.querySelectorAll(sel));
+
+  // interactive selection logic (options)
+  function makeSelectable(container, multi=false, limit=1) {
+    const opts = container.querySelectorAll('.opt');
+    opts.forEach(o => {
+      o.addEventListener('click', () => {
+        if (o.classList.contains('selected')) {
+          o.classList.remove('selected');
+          return;
+        }
+        if (!multi) {
+          opts.forEach(x=>x.classList.remove('selected'));
+          o.classList.add('selected');
+        } else {
+          const selected = container.querySelectorAll('.opt.selected');
+          if (selected.length >= limit) {
+            // if already full, toggle oldest (simple behavior)
+            selected[0].classList.remove('selected');
+          }
+          o.classList.add('selected');
+        }
+      });
+    });
+  }
+
+  makeSelectable(document.getElementById('optSubjects'), true, 2);
+  makeSelectable(document.getElementById('optCareer'), true, 2);
+  makeSelectable(document.getElementById('optTheory'), false, 1);
+  makeSelectable(document.getElementById('optPerformance'), false, 1);
+  makeSelectable(document.getElementById('optComp'), false, 1);
+
+  // range display
+  const mathRange = el('mathRange');
+  const mathVal = el('mathVal');
+  mathRange.addEventListener('input', ()=> mathVal.textContent = mathRange.value);
+
+  // Compute suggestion
+  function readSelections() {
+    const subjects = Array.from(document.querySelectorAll('#optSubjects .opt.selected')).map(n=>n.dataset.value);
+    const careers = Array.from(document.querySelectorAll('#optCareer .opt.selected')).map(n=>n.dataset.value);
+    const theory = (document.querySelector('#optTheory .opt.selected') || {}).dataset?.value || null;
+    const performance = (document.querySelector('#optPerformance .opt.selected') || {}).dataset?.value || null;
+    const comp = (document.querySelector('#optComp .opt.selected') || {}).dataset?.value || null;
+    const math = parseInt(mathRange.value,10);
+    return {subjects, careers, theory, performance, comp, math};
+  }
+
+  function computeScores(answers) {
+    // Start with base zeros
+    const scores = { PCM:0, PCB:0, Commerce:0, Arts:0, Vocational:0 };
+
+    // Subjects preference weight
+    answers.subjects.forEach(s=>{
+      if (s==='pcm') scores.PCM += 30;
+      if (s==='pcb') scores.PCB += 30;
+      if (s==='commerce') scores.Commerce += 30;
+      if (s==='arts') scores.Arts += 30;
+      if (s==='voc') scores.Vocational += 30;
+    });
+
+    // Math ability
+    // map 0-10 to influence on PCM/Commerce (math helps commerce/business math too)
+    scores.PCM += answers.math * 4; // up to +40
+    scores.Commerce += answers.math * 2; // up to +20
+    // if math low, give Arts/Vocational slight boost
+    if (answers.math <= 3) {
+      scores.Arts += 12; scores.Vocational += 10;
+    }
+
+    // Theory vs practical
+    if (answers.theory==='theory') {
+      scores.PCM += 6; scores.PCB += 6; scores.Arts += 6;
+    } else if (answers.theory==='practical') {
+      scores.Vocational += 18;
+    } else {
+      scores.Commerce += 6;
+    }
+
+    // Careers mapping
+    answers.careers.forEach(c=>{
+      if (c==='eng') { scores.PCM += 22; scores.Vocational += 8; }
+      if (c==='med') { scores.PCB += 26; scores.Vocational += 4; }
+      if (c==='bus') { scores.Commerce += 26; scores.PCM += 6; }
+      if (c==='creative') { scores.Arts += 26; scores.Vocational += 6; }
+      if (c==='techvoc') { scores.Vocational += 28; scores.PCM += 4; }
+    });
+
+    // Performance (exam strength)
+    if (answers.performance==='high') {
+      scores.PCM += 12; scores.PCB += 12; // competitive fields more available
+    } else if (answers.performance==='strug') {
+      scores.Vocational += 14; scores.Arts += 6;
+    }
+
+    // Competitive exam willingness
+    if (answers.comp==='yes') {
+      scores.PCM += 10; scores.PCB += 10; // JEE/NEET/CA
+    } else if (answers.comp==='no') {
+      scores.Vocational += 10; scores.Arts += 6; scores.Commerce += 6;
+    }
+
+    // Normalize to 0-100 scale roughly
+    let max = Math.max(...Object.values(scores));
+    if (max < 100) {
+      // scale up a bit
+      const factor = 100 / (max || 1);
+      Object.keys(scores).forEach(k => scores[k] = Math.round(scores[k]*factor));
+    } else {
+      // clamp
+      Object.keys(scores).forEach(k => scores[k] = Math.min(100, Math.round(scores[k])));
+    }
+
+    return scores;
+  }
+
+  function renderBars(scores) {
+    const container = el('barsArea');
+    container.innerHTML = '';
+    groups.forEach(g=>{
+      const value = scores[g] || 0;
+      const row = document.createElement('div');
+      row.className = 'bar-row';
+      row.innerHTML = `
+        <div class="bar-label">${g}</div>
+        <div class="bar-track"><div class="bar-fill" data-group="${g}" style="width:${value}%; background:${groupColors[g]}"></div></div>
+        <div class="score-pill">${value}%</div>
+      `;
+      container.appendChild(row);
+    });
+  }
+
+  function explainTop(scoreData) {
+    const sorted = Object.entries(scoreData).sort((a,b)=>b[1]-a[1]);
+    const [topName, topScore] = sorted[0];
+    const [secondName, secondScore] = sorted[1];
+
+    el('topGroup').textContent = topName;
+    el('confVal').textContent = topScore + '%';
+
+    // Reasoning
+    let why = `Top match because your answers align with ${topName} subjects and career preferences.`;
+    let next = 'Research common college courses, entrance tests and talk to a counselor.';
+
+    // small custom messages
+    if (topName === 'PCM') {
+      why = 'You show strong math interest/ability and engineering/data careers — PCM is a natural fit.';
+      next = 'Consider preparing for JEE/State engineering exams; explore B.Tech, BSc (CompSci), or Integrated CS programs.';
+    } else if (topName === 'PCB') {
+      why = 'You prefer biology/chemistry and life-science careers — PCB suits medical & allied courses.';
+      next = 'Research NEET or BSc (Life Sciences)/BPharm options; consider coaching if targeting medicine.';
+    } else if (topName === 'Commerce') {
+      why = 'You like accounts/economics and business careers — Commerce will prepare you for CA/Finance/Management.';
+      next = 'Explore B.Com, BBA, or professional paths like CA/CMA; strengthen maths for finance roles.';
+    } else if (topName === 'Arts') {
+      why = 'You enjoy humanities, creativity and theory — Arts opens pathways in design, media and civil services.';
+      next = 'Look into BA specializations, design diplomas, or media courses; build a portfolio if creative.';
+    } else if (topName === 'Vocational') {
+      why = 'You favor practical/hands-on learning — vocational courses give industry-ready skills quickly.';
+      next = 'Explore ITI, polytechnic diplomas, skill-based certificates or short-term industry courses.';
+    }
+
+    el('whyText').textContent = why;
+    el('nextSteps').textContent = next;
+
+    // also show small explain text
+    el('topExplain').textContent = `${topName} scored ${topScore}%. Next best: ${secondName} (${secondScore}%).`;
+  }
+
+  // Save / Load
+  function saveResult(payload) {
+    localStorage.setItem('after_inter_suggestion', JSON.stringify(payload));
+    alert('Result saved locally in your browser.');
+  }
+  function loadResult() {
+    const raw = localStorage.getItem('after_inter_suggestion');
+    if (!raw) { alert('No saved result found.'); return null; }
+    try {
+      return JSON.parse(raw);
+    } catch(e) { return null; }
+  }
+  function clearSaved() {
+    localStorage.removeItem('after_inter_suggestion');
+    alert('Saved result cleared.');
+  }
+
+  // Entry points
+  el('calcBtn').addEventListener('click', ()=>{
+    const answers = readSelections();
+    const scores = computeScores(answers);
+    renderBars(scores);
+    explainTop(scores);
+    // animate fills (already set width)
+  });
+
+  el('resetBtn').addEventListener('click', ()=>{
+    // clear selected
+    qsAll('.opt.selected').forEach(x=>x.classList.remove('selected'));
+    mathRange.value = 6; mathVal.textContent = 6;
+    el('barsArea').innerHTML = '';
+    el('topGroup').textContent = '—';
+    el('confVal').textContent = '—';
+    el('whyText').textContent = 'No data yet';
+    el('nextSteps').textContent = 'Complete career research & talk to counselor.';
+    el('topExplain').textContent = 'Answer the questi
